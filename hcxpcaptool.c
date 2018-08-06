@@ -12,6 +12,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <search.h>
 #include <time.h>
 #include <unistd.h>
 #ifdef __APPLE__
@@ -2471,8 +2472,7 @@ static int compare_stations(const void * const a, const void * b) {
 
   size_t min_essid_len = MIN(left->essidlen, right->essidlen);
 
-  return left->essidlen == right->essidlen &&
-         memcmp(left->mac_ap, right->mac_ap, sizeof(right->mac_ap)) &&
+  return memcmp(left->mac_ap, right->mac_ap, sizeof(right->mac_ap)) &&
          memcmp(left->mac_sta, right->mac_sta, sizeof(right->mac_sta)) &&
          memcmp(left->essid, right->essid, min_essid_len);
 }
@@ -2492,10 +2492,10 @@ inline static apstaessidl_t new_station(uint32_t tv_sec, uint32_t tv_usec,
   memset(new_station.essid, 0, 32);
   memcpy(new_station.essid, essid, 32);
   new_station.essidlen = essidlen;
-  apstaessidcount++;
   return new_station;
 }
 
+/*
 inline static apstaessidl_t *find_station(uint8_t essidlen, uint8_t *mac_ap,
                                           uint8_t *mac_sta, uint8_t *essid) {
   apstaessidl_t target, *result;
@@ -2509,6 +2509,7 @@ inline static apstaessidl_t *find_station(uint8_t essidlen, uint8_t *mac_ap,
                    APSTAESSIDLIST_SIZE, compare_stations);
   return result;
 }
+*/
 
 /*===========================================================================*/
 void addapstaessid(uint32_t tv_sec, uint32_t tv_usec, uint8_t status,
@@ -2526,14 +2527,6 @@ void addapstaessid(uint32_t tv_sec, uint32_t tv_usec, uint8_t status,
       fprintf(stderr, "failed to allocate memory\n");
       exit(EXIT_FAILURE);
     }
-    station = new_station(tv_sec, tv_usec, status, mac_sta, mac_ap, essidlen, essid);
-    memcpy(&apstaessidliste[apstaessidcount - 1], &station, APSTAESSIDLIST_SIZE);
-    return;
-  }
-
-  if (find_station(essidlen, mac_ap, mac_sta, essid) != NULL) {
-    /* already have it */
-    return;
   }
 
   /* make sure we have enough room */
@@ -2548,9 +2541,16 @@ void addapstaessid(uint32_t tv_sec, uint32_t tv_usec, uint8_t status,
     }
     apstaessidliste = zeiger;
   }
+
+  //if (find_station(essidlen, mac_ap, mac_sta, essid) != NULL) {
+    /* already have it */
+   // return;
+  //}
+
   station = new_station(tv_sec, tv_usec, status, mac_sta, mac_ap, essidlen, essid);
-  memcpy(&apstaessidliste[apstaessidcount - 1], &station, APSTAESSIDLIST_SIZE);
-  qsort(apstaessidliste, apstaessidcount, APSTAESSIDLIST_SIZE, compare_stations);
+  lsearch(&station, apstaessidliste, &apstaessidcount, APSTAESSIDLIST_SIZE, compare_stations);
+  //memcpy(&apstaessidliste[apstaessidcount - 1], &station, APSTAESSIDLIST_SIZE);
+  //qsort(apstaessidliste, apstaessidcount, APSTAESSIDLIST_SIZE, compare_stations);
   return;
 }
 /*===========================================================================*/
