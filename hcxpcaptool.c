@@ -2472,7 +2472,7 @@ static int compare_stations(const void * const a, const void * b) {
 
   size_t min_essid_len = MIN(left->essidlen, right->essidlen);
 
-  return left->essidlen != right->essidlen ||
+  return left->essidlen - right->essidlen ||
          memcmp(left->mac_ap, right->mac_ap, sizeof(right->mac_ap)) ||
          memcmp(left->mac_sta, right->mac_sta, sizeof(right->mac_sta)) ||
          memcmp(left->essid, right->essid, min_essid_len);
@@ -2516,9 +2516,8 @@ inline static apstaessidl_t *find_station(uint8_t essidlen, uint8_t *mac_ap,
 void addapstaessid(uint32_t tv_sec, uint32_t tv_usec, uint8_t status,
                    uint8_t *mac_sta, uint8_t *mac_ap, uint8_t essidlen,
                    uint8_t *essid) {
-  apstaessidl_t *zeiger;
   static size_t capacity = 0;
-  apstaessidl_t station;
+  apstaessidl_t *zeiger, station;
 
   /* first time setup */
   if (apstaessidliste == NULL) {
