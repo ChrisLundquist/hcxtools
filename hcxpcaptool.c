@@ -2496,33 +2496,30 @@ inline static apstaessidl_t new_station(uint32_t tv_sec, uint32_t tv_usec,
   return new_station;
 }
 
-/*
-inline static apstaessidl_t *find_station(uint8_t essidlen, uint8_t *mac_ap,
-                                          uint8_t *mac_sta, uint8_t *essid) {
-  apstaessidl_t target, *result;
-
-  memcpy(target.mac_ap, mac_ap, 6);
-  memcpy(target.mac_sta, mac_sta, 6);
-  memset(target.essid, 0, 32);
-  memcpy(target.essid, essid, 32);
-  target.essidlen = essidlen;
-  result = bsearch(&target, apstaessidliste, apstaessidcount,
-                   APSTAESSIDLIST_SIZE, compare_stations);
-  return result;
+static void noop() {
+    return;
 }
-*/
+
+void rebuild_index(void **index_root) {
+    tdestroy(*index_root, noop);
+    *index_root = NULL;
+    for(unsigned long i = 0; i < apstaessidcount; ++i) {
+        tsearch(&(apstaessidliste[apstaessidcount]), index_root, compare_stations);
+    }
+}
 
 /*===========================================================================*/
 void addapstaessid(uint32_t tv_sec, uint32_t tv_usec, uint8_t status,
                    uint8_t *mac_sta, uint8_t *mac_ap, uint8_t essidlen,
                    uint8_t *essid) {
   static size_t capacity = 0;
+  static void* index_root = NULL;
   apstaessidl_t *zeiger, station;
 
   /* first time setup */
   if (apstaessidliste == NULL) {
-    apstaessidliste = malloc(16 * APSTAESSIDLIST_SIZE);
-    capacity = 16;
+    apstaessidliste = malloc(4096 * APSTAESSIDLIST_SIZE);
+    capacity = 4096;
     if (apstaessidliste == NULL) {
       fprintf(stderr, "failed to allocate memory\n");
       exit(EXIT_FAILURE);
@@ -2540,17 +2537,21 @@ void addapstaessid(uint32_t tv_sec, uint32_t tv_usec, uint8_t status,
       exit(EXIT_FAILURE);
     }
     apstaessidliste = zeiger;
+    /* We have a new memory region so we have to rebuild our index */
+    rebuild_index(&index_root);
   }
 
-  //if (find_station(essidlen, mac_ap, mac_sta, essid) != NULL) {
-    /* already have it */
-   // return;
-  //}
-
   station = new_station(tv_sec, tv_usec, status, mac_sta, mac_ap, essidlen, essid);
-  lsearch(&station, apstaessidliste, &apstaessidcount, APSTAESSIDLIST_SIZE, compare_stations);
-  //memcpy(&apstaessidliste[apstaessidcount - 1], &station, APSTAESSIDLIST_SIZE);
-  //qsort(apstaessidliste, apstaessidcount, APSTAESSIDLIST_SIZE, compare_stations);
+  if(tfind(&station, &index_root, compare_stations))
+  {
+      /* already have it */
+      return;
+  }
+
+  apstaessidcount++;
+  /* We don't have it, add it to our collection and index it */
+  memcpy(&apstaessidliste[apstaessidcount], &station, APSTAESSIDLIST_SIZE);
+  tsearch(&(apstaessidliste[apstaessidcount]), &index_root, compare_stations);
   return;
 }
 /*===========================================================================*/
