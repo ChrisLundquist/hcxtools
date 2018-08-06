@@ -2472,8 +2472,9 @@ static int compare_stations(const void * const a, const void * b) {
 
   size_t min_essid_len = MIN(left->essidlen, right->essidlen);
 
-  return memcmp(left->mac_ap, right->mac_ap, sizeof(right->mac_ap)) &&
-         memcmp(left->mac_sta, right->mac_sta, sizeof(right->mac_sta)) &&
+  return left->essidlen != right->essidlen ||
+         memcmp(left->mac_ap, right->mac_ap, sizeof(right->mac_ap)) ||
+         memcmp(left->mac_sta, right->mac_sta, sizeof(right->mac_sta)) ||
          memcmp(left->essid, right->essid, min_essid_len);
 }
 
